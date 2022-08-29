@@ -60,7 +60,7 @@ const Layout = ({ children }) => {
                 placement="bottom"
                 overlay={
                   <Tooltip id={`tooltip`}>
-                    if this button doesn't update for you, try refresh the
+                    if this button doesn&#39;t update for you, try refresh the
                     page.
                   </Tooltip>
                 }
