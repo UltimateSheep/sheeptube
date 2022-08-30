@@ -27,28 +27,24 @@ const Details = ({ id, data }) => {
   const [channel, setChannel] = useState({});
   const [loading, setLoading] = useState(true);
   const [notFoundError, setNotFoundError] = useState(false);
-  const [cookieData, setCookieData] = useState({});
   const [videos, setVideos] = useState([]);
   const [subscribers, setSubscribers] = useState(0);
   const [isSubscribed, setIsSubcribed] = useState(false);
   const [loadingSub, setLoadingSub] = useState(false);
   const [isChannelAuthor, setIsChannelAuthor] = useState(false);
 
-  const fetchData = async (user) => {
+  const fetchData = async () => {
     const docRef = doc(db, "db", "channels");
     const docSnap = await getDoc(docRef);
     const vidRef = doc(db, "db", "videos");
     const vidSnap = await getDoc(vidRef);
-    const clientUserId = JSON.parse(JSON.parse(data)["id"]);
+    const clientUserId = data !== false ? JSON.parse(JSON.parse(data)["id"]) : false;
 
-    if (clientUserId === id) setIsChannelAuthor(true);
+    setIsChannelAuthor(clientUserId === false || clientUserId === id);
 
     if (docSnap.exists() && vidSnap.exists()) {
       const snapshot = docSnap.data();
       const vidData = vidSnap.data();
-
-      const { uid } = user;
-      console.log(user);
 
       setChannel(snapshot);
       console.log(snapshot);
@@ -57,7 +53,7 @@ const Details = ({ id, data }) => {
         return;
       }
 
-      if (id in snapshot[clientUserId]["subscribing"]) {
+      if (clientUserId !==false && id in snapshot[clientUserId]["subscribing"]) {
         setIsSubcribed(true);
       }
       
@@ -105,7 +101,6 @@ const Details = ({ id, data }) => {
       });
 
       setChannel(snapshot[id]);
-      setCookieData(user);
       setVideos(allVideos);
       setLoading(false);
       return;
@@ -159,12 +154,12 @@ const Details = ({ id, data }) => {
   };
 
   useEffect(() => {
-    const parsedData = JSON.parse(data);
-    const user = JSON.parse(parsedData["user"])[0];
+    // const parsedData = data && JSON.parse(data);
+    // const user = JSON.parse(parsedData["user"])[0];
 
-    console.log(user);
+    // console.log(user);
 
-    fetchData(user);
+    fetchData();
   }, []);
 
   return notFoundError ? (
@@ -248,9 +243,9 @@ export async function getServerSideProps({ query, res, req }) {
     console.log(data);
     if (Object.keys(data).length < 2) {
       return {
-        redirect: {
-          permanent: true,
-          destination: `/login`,
+        props: {
+          id: query["id"],
+          data: false,
         },
       };
     }

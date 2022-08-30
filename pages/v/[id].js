@@ -51,7 +51,7 @@ const Details = ({ id, data }) => {
     const docVidRef = doc(db, "db", "videos");
     const docVidSnap = await getDoc(docVidRef);
     const docVidData = docVidSnap.data();
-    const clientUserId = JSON.parse(JSON.parse(data)["id"]);
+    // const clientUserId = JSON.parse(JSON.parse(data)["id"]);
 
     if (!(id in docVidData)) {
       setNotFoundError(true);
@@ -66,12 +66,12 @@ const Details = ({ id, data }) => {
     const videoData = docVidData[id];
     const _author = docChannelData[authorId];
 
-    if (clientUserId === authorId) {
-      setIsChannelAuthor(true);
-    }
-    if (authorId in docChannelData[clientUserId]["subscribing"]) {
-      setIsSubcribed(true);
-    }
+    // if (clientUserId === authorId) {
+    //   setIsChannelAuthor(true);
+    // }
+    // if (authorId in docChannelData[clientUserId]["subscribing"]) {
+    //   setIsSubcribed(true);
+    // }
 
     setSubscribers(_author["total_subcribers"]);
     setLoading(false);
