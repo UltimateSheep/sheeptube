@@ -125,6 +125,7 @@ const Details = ({ id, data }) => {
       });
       await updateDoc(docRef, {
         [`${clientUserId}.subscribing`]: {
+          ...docData[clientUserId]["subscribing"],
           [id]: {
             id,
             timeStamp: Timestamp.now(),
