@@ -117,15 +117,24 @@ const Details = ({ id, data }) => {
       return (
         <Toast key={i}>
           <Toast.Header closeButton={false}>
-            <Image
-              src={commentAuthor["profilePicture"]}
-              className="rounded"
-              alt="aka"
-              width={30}
-              height={30}
-            />
+            <Link
+              href={`${location.protocol}//${location.host}/c/${e["author"]}`}
+            >
+              <a className="me-auto" style={{ color: "black", textDecoration: "none" }}>
+                <Image
+                  src={commentAuthor["profilePicture"]}
+                  className="rounded"
+                  style={{marginTop: "20px"}}
+                  alt="aka"
+                  width={30}
+                  height={30}
+                />
+                <strong className="me-auto" style={{ marginLeft: "5px" }}>
+                  {commentAuthor["name"]}
+                </strong>
+              </a>
+            </Link>{" "}
             <strong className="me-auto" style={{ marginLeft: "3px" }}>
-              {commentAuthor["name"]}{" "}
               {e["author"] === authorId ? (
                 <Badge bg="primary">Author</Badge>
               ) : (
