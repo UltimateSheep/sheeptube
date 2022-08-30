@@ -35,6 +35,12 @@ const Details = ({ id, data }) => {
   const [loadingComment, setLoadingComment] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [subscribers, setSubscribers] = useState(0);
+  const [isSubscribed, setIsSubcribed] = useState(false);
+  const [loadingSub, setLoadingSub] = useState(false);
+  const [isChannelAuthor, setIsChannelAuthor] = useState(false);
+
   const router = useRouter();
 
   const FetchData = async () => {
@@ -45,6 +51,7 @@ const Details = ({ id, data }) => {
     const docVidRef = doc(db, "db", "videos");
     const docVidSnap = await getDoc(docVidRef);
     const docVidData = docVidSnap.data();
+    const clientUserId = JSON.parse(JSON.parse(data)["id"]);
 
     if (!(id in docVidData)) {
       setNotFoundError(true);
@@ -59,6 +66,14 @@ const Details = ({ id, data }) => {
     const videoData = docVidData[id];
     const _author = docChannelData[authorId];
 
+    if (clientUserId === authorId) {
+      setIsChannelAuthor(true);
+    }
+    if (authorId in docChannelData[clientUserId]["subscribing"]) {
+      setIsSubcribed(true);
+    }
+
+    setSubscribers(_author["total_subcribers"]);
     setLoading(false);
     setVideo(videoData);
     setAuthor(_author);
@@ -260,6 +275,16 @@ const Details = ({ id, data }) => {
               <p style={{ marginLeft: "10px" }}>{author["name"]}</p>
             </a>
           </Link>
+          <Badge
+            bg="danger"
+            style={{
+              height: "22px",
+              marginTop: "3px",
+              marginLeft: "10px",
+            }}
+          >
+            Subscribers: {subscribers}
+          </Badge>
         </div>
         <br />
         <Button

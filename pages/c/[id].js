@@ -1,15 +1,26 @@
 import { async } from "@firebase/util";
 import React, { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
-import { Button } from "react-bootstrap";
+import { Badge, Button } from "react-bootstrap";
 import { ParseCookies } from "../cookies";
-import { doc, getDoc, setDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  updateDoc,
+  increment,
+  Timestamp,
+  deleteDoc,
+  deleteField,
+} from "firebase/firestore";
 import { db } from "../../firebase-config";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import Link from "next/link";
 import Head from "next/head";
-
 
 const Details = ({ id, data }) => {
   // const router = useRouter();
@@ -18,12 +29,19 @@ const Details = ({ id, data }) => {
   const [notFoundError, setNotFoundError] = useState(false);
   const [cookieData, setCookieData] = useState({});
   const [videos, setVideos] = useState([]);
+  const [subscribers, setSubscribers] = useState(0);
+  const [isSubscribed, setIsSubcribed] = useState(false);
+  const [loadingSub, setLoadingSub] = useState(false);
+  const [isChannelAuthor, setIsChannelAuthor] = useState(false);
 
   const fetchData = async (user) => {
     const docRef = doc(db, "db", "channels");
     const docSnap = await getDoc(docRef);
     const vidRef = doc(db, "db", "videos");
     const vidSnap = await getDoc(vidRef);
+    const clientUserId = JSON.parse(JSON.parse(data)["id"]);
+
+    if (clientUserId === id) setIsChannelAuthor(true);
 
     if (docSnap.exists() && vidSnap.exists()) {
       const snapshot = docSnap.data();
@@ -38,21 +56,33 @@ const Details = ({ id, data }) => {
         setNotFoundError(true);
         return;
       }
-      const selectedVideos = snapshot[id]["videos"]
-      const sortedVids = Object.values(vidData).sort((a,b)=>{
-        return b["createdAt"].seconds - a["createdAt"].seconds
-      })
-      console.log("sorted", sortedVids)
 
+      if (id in snapshot[clientUserId]["subscribing"]) {
+        setIsSubcribed(true);
+      }
+      
+      setSubscribers(snapshot[id]["total_subcribers"]);
+      const selectedVideos = snapshot[id]["videos"];
+      const sortedVids = Object.values(vidData).sort((a, b) => {
+        return b["createdAt"].seconds - a["createdAt"].seconds;
+      });
+      console.log("sorted", sortedVids);
       const allVideos = sortedVids.map((e, i) => {
         console.log(i, e);
-        const t = new Date(e["createdAt"].seconds * 1000)
+        const t = new Date(e["createdAt"].seconds * 1000);
         console.log(t);
 
         return e["author"] === id ? (
-          <>
+          <div key={i}>
             <Link href={`${location.origin}/v/${e["id"]}`} key={i}>
-              <a style={{ color: "black", textDecoration: "none", marginRight: "20px", width:"480px"}}>
+              <a
+                style={{
+                  color: "black",
+                  textDecoration: "none",
+                  marginRight: "20px",
+                  width: "480px",
+                }}
+              >
                 <video
                   src={e["url"]}
                   style={{
@@ -63,11 +93,15 @@ const Details = ({ id, data }) => {
                   }}
                   id="video"
                 />
-                <p style={{textAlign: "center"}}>{e["title"]} - {t.toLocaleString("en-US")}</p>
+                <p style={{ textAlign: "center" }}>
+                  {e["title"]} - {t.toLocaleString("en-US")}
+                </p>
               </a>
             </Link>
-          </>
-        ): <></>;
+          </div>
+        ) : (
+          <></>
+        );
       });
 
       setChannel(snapshot[id]);
@@ -78,6 +112,52 @@ const Details = ({ id, data }) => {
     }
     alert("Error! no such doc exist!!!");
   };
+
+  const ToggleSub = async () => {
+    const docRef = doc(db, "db", "channels");
+    const docData = (await getDoc(docRef)).data();
+    const clientUserId = JSON.parse(JSON.parse(data)["id"]);
+
+    if (!clientUserId in docData) {
+      console.error("no id in docData! /c/[id].js");
+      return;
+    }
+    setLoadingSub(true);
+    if (!isSubscribed) {
+      await updateDoc(docRef, {
+        //update the channel to sub first
+        [`${id}.total_subcribers`]: increment(1),
+      });
+      await updateDoc(docRef, {
+        [`${clientUserId}.subscribing`]: {
+          [id]: {
+            id,
+            timeStamp: Timestamp.now(),
+          },
+        },
+      });
+      const docNewData = (await getDoc(docRef)).data();
+
+      setSubscribers(docNewData[id]["total_subcribers"])
+      setIsSubcribed(true);
+      setLoadingSub(false);
+      return;
+    }
+    
+    await updateDoc(docRef, {
+      //update the channel to sub first
+      [`${id}.total_subcribers`]: increment(-1),
+    });
+    await updateDoc(docRef, {
+      [`${clientUserId}.subscribing.${id}`]: deleteField(),
+    });
+    const docNewData = (await getDoc(docRef)).data();
+    setSubscribers(docNewData[id]["total_subcribers"])
+
+    setIsSubcribed(false);
+    setLoadingSub(false);
+  };
+
   useEffect(() => {
     const parsedData = JSON.parse(data);
     const user = JSON.parse(parsedData["user"])[0];
@@ -115,22 +195,37 @@ const Details = ({ id, data }) => {
         <h1 style={{ marginTop: "25px", marginLeft: "20px" }}>
           {channel["name"]}
         </h1>
+        <Badge bg="danger" style={{ height: "22px", marginTop: "43px", marginLeft: "10px" }}>Subscribers: {subscribers}</Badge>
+        <Button
+          variant={isSubscribed ? "secondary" : "danger"}
+          style={{ height: "40px", marginTop: "33px", marginLeft: "10px" }}
+          onClick={() => ToggleSub()}
+          disabled={loadingSub || isChannelAuthor}
+        >
+          {isSubscribed ? "Subscribed" : "Subscribe"}
+        </Button>
       </div>
       <textarea
         rows="10"
         cols="80"
         readOnly
         style={{ resize: "none", marginTop: "10px" }}
-      >
-        {channel["about"]}
-      </textarea>
+        defaultValue={channel["about"]}
+      ></textarea>
       <hr />
       <div className="videos">
         <h1>VIDEOS : </h1>
         {videos.length === 0 ? (
           <p>This channel doesn&#39;t have any videos.</p>
         ) : (
-          <div style={{display:"inline-grid", gridTemplateColumns: "auto auto auto"}}>{videos}</div>
+          <div
+            style={{
+              display: "inline-grid",
+              gridTemplateColumns: "auto auto auto",
+            }}
+          >
+            {videos}
+          </div>
         )}
       </div>
     </div>
